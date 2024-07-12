@@ -15,19 +15,13 @@ module Capistrano
       def set_defaults
         set_if_empty :cable_role, :web
         set_if_empty :cable_port, 29292
+        set_if_empty :cable_rackup_file, 'cable/config.ru'
         set_if_empty :cable_dir, -> { File.join(release_path, "cable") }
         set_if_empty :cable_pidfile, -> { File.join(shared_path, "tmp", "pids", "cable.pid") }
         set_if_empty :cable_env, -> { fetch(:rack_env, fetch(:rails_env, fetch(:stage))) }
         set_if_empty :cable_access_log, -> { File.join(shared_path, "log", "cable.access.log") }
         set_if_empty :cable_error_log, -> { File.join(shared_path, "log", "cable.error.log") }
-
-        # Chruby, Rbenv and RVM integration
-        append :chruby_map_bins, "puma", "pumactl" if fetch(:chruby_map_bins)
-        append :rbenv_map_bins, "puma", "pumactl" if fetch(:rbenv_map_bins)
-        append :rvm_map_bins, "puma", "pumactl" if fetch(:rvm_map_bins)
-
-        # Bundler integration
-        append :bundle_bins, "puma", "pumactl"
+        set_if_empty :cable_phased_restart, true
 
         set_if_empty :cable_systemctl_bin, -> { fetch(:systemctl_bin, "/bin/systemctl") }
         set_if_empty :cable_service_unit_name, -> { "#{fetch(:application)}_cable_#{fetch(:stage)}" }
@@ -43,6 +37,14 @@ module Capistrano
         set_if_empty :cable_lingering_user, -> { fetch(:lingering_user, fetch(:user)) }
 
         set_if_empty :cable_service_templates_path, fetch(:service_templates_path, "config/deploy/templates")
+
+        # Chruby, Rbenv and RVM integration
+        append :chruby_map_bins, "puma", "pumactl" if fetch(:chruby_map_bins)
+        append :rbenv_map_bins, "puma", "pumactl" if fetch(:rbenv_map_bins)
+        append :rvm_map_bins, "puma", "pumactl" if fetch(:rvm_map_bins)
+
+        # Bundler integration
+        append :bundle_bins, "puma", "pumactl"
       end
 
       def expanded_bundle_command
@@ -118,13 +120,12 @@ module Capistrano
       def puma_options
         options = []
         options << "--no-config"
-        # options << "--dir #{fetch(:cable_dir)}" if fetch(:cable_dir) # or change WorkingDirectory in cable.service?
         if fetch(:cable_ssl_certificate) && fetch(:cable_ssl_certificate_key)
           options << "--bind 'ssl://0.0.0.0:#{fetch(:cable_port)}?key=#{fetch(:cable_ssl_certificate_key)}&cert=#{fetch(:cable_ssl_certificate)}'"
-          # Can use: &verify_mode=none&ca=...
+        else
+          options << "--port #{fetch(:cable_port)}"
         end
         options << "--environment #{fetch(:cable_env)}"
-        # options << "--port #{fetch(:cable_port)}"
         options << "--pidfile #{fetch(:cable_pidfile)}" if fetch(:cable_pidfile)
         options << "--threads #{fetch(:cable_threads)}" if fetch(:cable_threads)
         options << "--workers #{fetch(:cable_workers)}" if fetch(:cable_workers)

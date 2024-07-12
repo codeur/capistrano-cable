@@ -20,7 +20,7 @@ WatchdogSec=30
 <%="User=#{cable_user(@role)}" if fetch(:cable_systemctl_user) == :system %>
 <%="PIDFile=#{fetch(:cable_pidfile)}" if fetch(:cable_pidfile) %>
 WorkingDirectory=<%= current_path %>
-ExecStart=<%= expanded_bundle_command %> exec puma <%= puma_options %> cable/config.ru
+ExecStart=<%= expanded_bundle_command %> exec puma <%= puma_options %> <%= fetch(:cable_rackup_file) %>
 ExecReload=/bin/kill -USR1 $MAINPID
 Environment='RAILS_ENV=<%= fetch(:stage) %>'
 <% fetch(:default_env).reject{ |k, _| k.to_s == 'path' }.each do |variable, value| -%>

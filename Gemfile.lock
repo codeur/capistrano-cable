@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    capistrano-cable (0.1.0)
+    capistrano-cable (0.1.1)
       capistrano (~> 3.0)
 
 GEM

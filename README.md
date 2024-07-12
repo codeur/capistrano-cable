@@ -1,6 +1,7 @@
 # Capistrano::Cable
 
 **Capistrano::Cable** helps to deploy standalone ActionCable server with Puma over `systemd`.
+It doesn't use a specific `puma.rb` for Puma configuration, it relies on given options.
 
 ## Installation
 
@@ -38,28 +39,29 @@ install_plugin Capistrano::Cable
 ```
 
 ### Config
+Many options are available to customize the cable server configuration. Here are the main ones:
 
 ```ruby
 # config/deploy.rb or config/deploy/<stage>.rb
 set :cable_role, :web
+set :cable_port, 29292
+# set :cable_ssl_certificate
+# set :cable_ssl_certificate_key
+set :cable_rackup_file, 'cable/config.ru'
+set :cable_dir, -> { File.join(release_path, "cable") }
+set :cable_pidfile, -> { File.join(shared_path, "tmp", "pids", "cable.pid") }
 set :cable_env, -> { fetch(:rack_env, fetch(:rails_env, fetch(:stage))) }
-set :cable_access_log, -> { File.join(shared_path, 'log', 'cable.log') }
-set :cable_error_log, -> { File.join(shared_path, 'log', 'cable.log') }
-
-set :cable_systemctl_bin, -> { fetch(:systemctl_bin, '/bin/systemctl') }
-set :cable_service_unit_name, -> { "#{fetch(:application)}_cable_#{fetch(:stage)}" }
-set :cable_enable_socket_service, false
-# set :cable_bind, ... # Example: ->{ "unix:/path/to/cable.sock" }
-
+set :cable_access_log, -> { File.join(shared_path, "log", "cable.access.log") }
+set :cable_error_log, -> { File.join(shared_path, "log", "cable.error.log") }
+set :cable_phased_restart, true
 set :cable_service_unit_env_files, -> { fetch(:service_unit_env_files, []) }
 set :cable_service_unit_env_vars, -> { fetch(:service_unit_env_vars, []) }
-
-set :cable_systemctl_user, -> { fetch(:systemctl_user, :user) }
-set :cable_enable_lingering, -> { fetch(:cable_systemctl_user) != :system }
-set :cable_lingering_user, -> { fetch(:lingering_user, fetch(:user)) }
-
-set :cable_service_templates_path, fetch(:service_templates_path, 'config/deploy/templates')
+set :cable_service_templates_path, fetch(:service_templates_path, "config/deploy/templates")
 ```
+See Capistrao::Cable::Systemd#set_defaults for more details.
+
+To enable SSL, set the `cable_ssl_certificate` and `cable_ssl_certificate_key` options.
+The both are required to enable SSL.
 
 ## Development
 
