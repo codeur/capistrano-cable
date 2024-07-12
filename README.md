@@ -53,7 +53,7 @@ set :cable_pidfile, -> { File.join(shared_path, "tmp", "pids", "cable.pid") }
 set :cable_env, -> { fetch(:rack_env, fetch(:rails_env, fetch(:stage))) }
 set :cable_access_log, -> { File.join(shared_path, "log", "cable.access.log") }
 set :cable_error_log, -> { File.join(shared_path, "log", "cable.error.log") }
-set :cable_phased_restart, true
+set :cable_phased_restart, -> { true }
 set :cable_service_unit_env_files, -> { fetch(:service_unit_env_files, []) }
 set :cable_service_unit_env_vars, -> { fetch(:service_unit_env_vars, []) }
 set :cable_service_templates_path, fetch(:service_templates_path, "config/deploy/templates")

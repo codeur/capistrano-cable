@@ -21,7 +21,7 @@ module Capistrano
         set_if_empty :cable_env, -> { fetch(:rack_env, fetch(:rails_env, fetch(:stage))) }
         set_if_empty :cable_access_log, -> { File.join(shared_path, "log", "cable.access.log") }
         set_if_empty :cable_error_log, -> { File.join(shared_path, "log", "cable.error.log") }
-        set_if_empty :cable_phased_restart, true
+        set_if_empty :cable_phased_restart, -> { true }
 
         set_if_empty :cable_systemctl_bin, -> { fetch(:systemctl_bin, "/bin/systemctl") }
         set_if_empty :cable_service_unit_name, -> { "#{fetch(:application)}_cable_#{fetch(:stage)}" }
