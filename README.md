@@ -1,24 +1,65 @@
 # Capistrano::Cable
 
-TODO: Delete this and the text below, and describe your gem
-
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/capistrano/cable`. To experiment with that code, run `bin/console` for an interactive prompt.
+**Capistrano::Cable** helps to deploy standalone ActionCable server with Puma over `systemd`.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
 Install the gem and add to the application's Gemfile by executing:
 
-    $ bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+    $ bundle add capistrano-cable
 
 If bundler is not being used to manage dependencies, install the gem by executing:
 
-    $ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+    $ gem install capistrano-cable
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+# Capfile
+
+require 'capistrano/cable'
+install_plugin Capistrano::Cable::Systemd
+```
+
+To prevent loading the hooks of the plugin, add false to the load_hooks param.
+```ruby
+# Capfile
+
+install_plugin Capistrano::Cable, load_hooks: false  # Default cable tasks without hooks
+```
+
+To make it work with rvm, rbenv and chruby, install the plugin after corresponding library inclusion.
+```ruby
+# Capfile
+
+require 'capistrano/rbenv'
+require 'capistrano/cable'
+install_plugin Capistrano::Cable
+```
+
+### Config
+
+```ruby
+# config/deploy.rb or config/deploy/<stage>.rb
+set :cable_role, :web
+set :cable_env, -> { fetch(:rack_env, fetch(:rails_env, fetch(:stage))) }
+set :cable_access_log, -> { File.join(shared_path, 'log', 'cable.log') }
+set :cable_error_log, -> { File.join(shared_path, 'log', 'cable.log') }
+
+set :cable_systemctl_bin, -> { fetch(:systemctl_bin, '/bin/systemctl') }
+set :cable_service_unit_name, -> { "#{fetch(:application)}_cable_#{fetch(:stage)}" }
+set :cable_enable_socket_service, false
+# set :cable_bind, ... # Example: ->{ "unix:/path/to/cable.sock" }
+
+set :cable_service_unit_env_files, -> { fetch(:service_unit_env_files, []) }
+set :cable_service_unit_env_vars, -> { fetch(:service_unit_env_vars, []) }
+
+set :cable_systemctl_user, -> { fetch(:systemctl_user, :user) }
+set :cable_enable_lingering, -> { fetch(:cable_systemctl_user) != :system }
+set :cable_lingering_user, -> { fetch(:lingering_user, fetch(:user)) }
+
+set :cable_service_templates_path, fetch(:service_templates_path, 'config/deploy/templates')
+```
 
 ## Development
 
@@ -28,7 +69,9 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/capistrano-cable. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/capistrano-cable/blob/main/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/codeur/capistrano-cable. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/codeur/capistrano-cable/blob/main/CODE_OF_CONDUCT.md).
+
+Largely inspired from [capistrano-puma](https://github.com/seuros/capistrano-puma) gem.
 
 ## License
 
@@ -36,4 +79,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the Capistrano::Cable project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/capistrano-cable/blob/main/CODE_OF_CONDUCT.md).
+Everyone interacting in the Capistrano::Cable project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/codeur/capistrano-cable/blob/main/CODE_OF_CONDUCT.md).

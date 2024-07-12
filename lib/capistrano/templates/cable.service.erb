@@ -1,0 +1,45 @@
+# This file tells systemd how to run Cable as a 24/7 long-running daemon.
+#
+# Customize this file based on your bundler location, app directory, etc.
+# Customize and copy this into /usr/lib/systemd/system (CentOS) or /lib/systemd/system (Ubuntu).
+# Then run:
+#   - systemctl enable <%= fetch(:cable_service_unit_name) %>
+#   - systemctl {start,stop,restart} <%= fetch(:cable_service_unit_name) %>
+#
+#
+# Use `journalctl -u <%= fetch(:cable_service_unit_name) %> -rn 100` to view the last 100 lines of log output.
+#
+[Unit]
+Description=Cable HTTP Server for <%= "#{fetch(:application)} (#{fetch(:stage)})" %>
+<%= "Requires=#{fetch(:cable_socket_unit_name)}" if fetch(:cable_enable_socket_service) %>
+After=syslog.target network.target
+
+[Service]
+Type=<%= service_unit_type %>
+WatchdogSec=30
+<%="User=#{cable_user(@role)}" if fetch(:cable_systemctl_user) == :system %>
+<%="PIDFile=#{fetch(:cable_pidfile)}" if fetch(:cable_pidfile) %>
+WorkingDirectory=<%= current_path %>
+ExecStart=<%= expanded_bundle_command %> exec puma <%= puma_options %> cable/config.ru
+ExecReload=/bin/kill -USR1 $MAINPID
+Environment='RAILS_ENV=<%= fetch(:stage) %>'
+<% fetch(:default_env).reject{ |k, _| k.to_s == 'path' }.each do |variable, value| -%>
+Environment='<%= variable.to_s.upcase %>=<%= value.to_s %>'
+<% end -%>
+<%- Array(fetch(:cable_service_unit_env_files)).each do |file| %>
+<%="EnvironmentFile=#{file}" -%>
+<% end -%>
+<% Array(fetch(:cable_service_unit_env_vars)).each do |environment_variable| %>
+<%="Environment=\"#{environment_variable}\"" -%>
+<% end -%>
+
+# if we crash, restart
+RestartSec=1
+Restart=always
+
+<%="StandardOutput=append:#{fetch(:cable_access_log)}" if fetch(:cable_access_log) %>
+<%="StandardError=append:#{fetch(:cable_error_log)}" if fetch(:cable_error_log) %>
+
+SyslogIdentifier=<%= fetch(:cable_service_unit_name) %>
+[Install]
+WantedBy=<%=(fetch(:cable_systemctl_user) == :system) ? "multi-user.target" : "default.target"%>
