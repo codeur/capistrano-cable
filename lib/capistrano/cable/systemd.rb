@@ -15,7 +15,7 @@ module Capistrano
       def set_defaults
         set_if_empty :cable_role, :web
         set_if_empty :cable_port, 29292
-        set_if_empty :cable_rackup_file, 'cable/config.ru'
+        set_if_empty :cable_rackup_file, "cable/config.ru"
         set_if_empty :cable_dir, -> { File.join(release_path, "cable") }
         set_if_empty :cable_pidfile, -> { File.join(shared_path, "tmp", "pids", "cable.pid") }
         set_if_empty :cable_env, -> { fetch(:rack_env, fetch(:rails_env, fetch(:stage))) }
@@ -120,10 +120,10 @@ module Capistrano
       def puma_options
         options = []
         options << "--no-config"
-        if fetch(:cable_ssl_certificate) && fetch(:cable_ssl_certificate_key)
-          options << "--bind 'ssl://0.0.0.0:#{fetch(:cable_port)}?key=#{fetch(:cable_ssl_certificate_key)}&cert=#{fetch(:cable_ssl_certificate)}'"
+        options << if fetch(:cable_ssl_certificate) && fetch(:cable_ssl_certificate_key)
+          "--bind 'ssl://0.0.0.0:#{fetch(:cable_port)}?key=#{fetch(:cable_ssl_certificate_key)}&cert=#{fetch(:cable_ssl_certificate)}'"
         else
-          options << "--port #{fetch(:cable_port)}"
+          "--port #{fetch(:cable_port)}"
         end
         options << "--environment #{fetch(:cable_env)}"
         options << "--pidfile #{fetch(:cable_pidfile)}" if fetch(:cable_pidfile)
