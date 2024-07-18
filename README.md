@@ -45,6 +45,7 @@ Many options are available to customize the cable server configuration. Here are
 # config/deploy.rb or config/deploy/<stage>.rb
 set :cable_role, :web
 set :cable_port, 29292
+# set :cable_limit_nofile, 65536 # optional, to customize if `Errno::EMFILE: Too many open files` happens
 # set :cable_ssl_certificate
 # set :cable_ssl_certificate_key
 set :cable_rackup_file, 'cable/config.ru'

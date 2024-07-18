@@ -17,6 +17,7 @@ After=syslog.target network.target
 [Service]
 Type=<%= service_unit_type %>
 WatchdogSec=30
+<%="LimitNOFILE=#{fetch(:cable_limit_nofile)}" if fetch(:cable_limit_nofile) %>
 <%="User=#{cable_user(@role)}" if fetch(:cable_systemctl_user) == :system %>
 <%="PIDFile=#{fetch(:cable_pidfile)}" if fetch(:cable_pidfile) %>
 WorkingDirectory=<%= current_path %>
