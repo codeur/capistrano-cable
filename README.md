@@ -95,8 +95,10 @@ written from the same option.
 ## Migrating to 0.2.0
 
 `cable_port`, `cable_ssl_certificate` and `cable_ssl_certificate_key` are gone,
-replaced by `cable_bind`. A deploy that still sets one of them stops right away
-with a message telling what to write instead.
+replaced by `cable_bind`. A deploy that still sets one of them stops on
+`deploy:starting`, before anything is uploaded, with a message telling what to
+write instead. `cable:install` refuses to run too, for setups that install the
+plugin without its hooks.
 
 Nothing else to do on the Capistrano side: the systemd units are now installed
 at every deploy, before the server is restarted, so upgrading the gem and

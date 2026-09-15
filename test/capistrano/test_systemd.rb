@@ -50,14 +50,15 @@ class Capistrano::Cable::TestSystemd < Minitest::Test
     assert_nil plugin.check_removed_options!
   end
 
-  def test_units_are_installed_at_every_deploy_before_the_server_is_restarted
-    Rake::Task.clear
-    ran = []
-    Rake::Task.define_task("deploy:finished")
-    Rake::Task.define_task("cable:install") { ran << "install" }
-    Rake::Task.define_task("cable:smart_restart") { ran << "smart_restart" }
+  def test_configuration_is_checked_before_the_deploy_starts
+    ran = hook_deploy_tasks
+    Rake::Task["deploy:starting"].invoke
 
-    plugin.register_hooks
+    assert_equal ["check"], ran
+  end
+
+  def test_units_are_installed_at_every_deploy_before_the_server_is_restarted
+    ran = hook_deploy_tasks
     Rake::Task["deploy:finished"].invoke
 
     assert_equal ["install", "smart_restart"], ran
@@ -104,6 +105,19 @@ class Capistrano::Cable::TestSystemd < Minitest::Test
   def plugin(options = {})
     options.each { |key, value| set(key, value) }
     Plugin.new.tap(&:set_defaults)
+  end
+
+  # Replaces the deploy and cable tasks with stubs recording what they run, and
+  # registers the plugin hooks on them.
+  def hook_deploy_tasks
+    ran = []
+    Rake::Task.clear
+    ["deploy:starting", "deploy:finished"].each { |name| Rake::Task.define_task(name) }
+    ["cable:check", "cable:install", "cable:smart_restart"].each do |name|
+      Rake::Task.define_task(name) { ran << name.delete_prefix("cable:") }
+    end
+    plugin.register_hooks
+    ran
   end
 
   def render(template, options = {})

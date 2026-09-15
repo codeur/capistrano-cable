@@ -7,8 +7,8 @@ module Capistrano
   module Cable
     class Systemd < Capistrano::Plugin
       # Options dropped in favour of :cable_bind. They are still looked up so
-      # that a stale setting fails the deploy instead of silently moving the
-      # server to another address.
+      # that a stale setting stops the deploy before it does anything, instead
+      # of silently moving the server to another address.
       REMOVED_OPTIONS = {
         cable_port: 'set :cable_bind, "tcp://0.0.0.0:<port>"',
         cable_ssl_certificate: 'set :cable_bind, "ssl://0.0.0.0:<port>?cert=<cert>&key=<key>"',
@@ -16,6 +16,7 @@ module Capistrano
       }.freeze
 
       def register_hooks
+        before "deploy:starting", "cable:check"
         after "deploy:finished", "cable:install"
         after "deploy:finished", "cable:smart_restart"
       end

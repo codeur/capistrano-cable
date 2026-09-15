@@ -3,6 +3,11 @@
 git_plugin = self
 
 namespace :cable do
+  desc "Check Cable configuration"
+  task :check do
+    git_plugin.check_removed_options!
+  end
+
   desc "Install Cable systemd service"
   task :install do
     git_plugin.check_removed_options!
