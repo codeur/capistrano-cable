@@ -1,10 +1,22 @@
 require "capistrano/plugin"
+require "erb"
+require "stringio"
 require_relative "bind"
 
 module Capistrano
   module Cable
     class Systemd < Capistrano::Plugin
+      # Options dropped in favour of :cable_bind. They are still looked up so
+      # that a stale setting fails the deploy instead of silently moving the
+      # server to another address.
+      REMOVED_OPTIONS = {
+        cable_port: 'set :cable_bind, "tcp://0.0.0.0:<port>"',
+        cable_ssl_certificate: 'set :cable_bind, "ssl://0.0.0.0:<port>?cert=<cert>&key=<key>"',
+        cable_ssl_certificate_key: 'set :cable_bind, "ssl://0.0.0.0:<port>?cert=<cert>&key=<key>"'
+      }.freeze
+
       def register_hooks
+        after "deploy:finished", "cable:install"
         after "deploy:finished", "cable:smart_restart"
       end
 
@@ -14,7 +26,7 @@ module Capistrano
 
       def set_defaults
         set_if_empty :cable_role, :web
-        set_if_empty :cable_port, 29292
+        set_if_empty :cable_bind, -> { "unix://#{shared_path.join("tmp", "sockets", "cable.sock")}" }
         set_if_empty :cable_rackup_file, "cable/config.ru"
         set_if_empty :cable_dir, -> { File.join(release_path, "cable") }
         set_if_empty :cable_pidfile, -> { File.join(shared_path, "tmp", "pids", "cable.pid") }
@@ -25,9 +37,8 @@ module Capistrano
 
         set_if_empty :cable_systemctl_bin, -> { fetch(:systemctl_bin, "/bin/systemctl") }
         set_if_empty :cable_service_unit_name, -> { "#{fetch(:application)}_cable_#{fetch(:stage)}" }
-        set_if_empty :cable_enable_socket_service, false
+        set_if_empty :cable_enable_socket_service, true
         set_if_empty :cable_socket_unit_name, -> { "#{fetch(:application)}_cable_#{fetch(:stage)}.socket" }
-        # set_if_empty :cable_bind, -> { "unix:/tmp/#{fetch(:app_domain)}.sock" }
 
         set_if_empty :cable_service_unit_env_files, -> { fetch(:service_unit_env_files, []) }
         set_if_empty :cable_service_unit_env_vars, -> { fetch(:service_unit_env_vars, []) }
@@ -45,6 +56,13 @@ module Capistrano
 
         # Bundler integration
         append :bundle_bins, "puma", "pumactl"
+      end
+
+      def check_removed_options!
+        messages = REMOVED_OPTIONS.select { |option, _| fetch(option) }.map do |option, replacement|
+          ":#{option} is not supported anymore, use :cable_bind instead (#{replacement})"
+        end
+        raise ArgumentError, messages.join("\n") if messages.any?
       end
 
       def expanded_bundle_command
@@ -103,12 +121,6 @@ module Capistrano
           role.user
       end
 
-      def cable_bind
-        Array(fetch(:cable_bind)).collect do |bind|
-          "bind '#{bind}'"
-        end.join("\n")
-      end
-
       def service_unit_type
         ## Jruby don't support notify
         return "simple" if RUBY_ENGINE == "jruby"
@@ -120,11 +132,7 @@ module Capistrano
       def puma_options
         options = []
         options << "--no-config"
-        options << if fetch(:cable_ssl_certificate) && fetch(:cable_ssl_certificate_key)
-          "--bind 'ssl://0.0.0.0:#{fetch(:cable_port)}?key=#{fetch(:cable_ssl_certificate_key)}&cert=#{fetch(:cable_ssl_certificate)}'"
-        else
-          "--port #{fetch(:cable_port)}"
-        end
+        cable_binds.each { |bind| options << "--bind '#{bind}'" }
         options << "--environment #{fetch(:cable_env)}"
         options << "--pidfile #{fetch(:cable_pidfile)}" if fetch(:cable_pidfile)
         options << "--threads #{fetch(:cable_threads)}" if fetch(:cable_threads)
@@ -156,10 +164,11 @@ module Capistrano
       end
 
       def cable_binds
-        Array(fetch(:cable_bind)).map do |m|
-          etype, address = /(tcp|unix|ssl):\/{1,2}(.+)/.match(m).captures
-          Bind.new(m, etype.to_sym, address)
-        end
+        Array(fetch(:cable_bind)).map { |bind| Bind.new(bind) }
+      end
+
+      def cable_socket_dirs
+        cable_binds.select(&:unix?).map { |bind| File.dirname(bind.address) }.uniq
       end
     end
   end

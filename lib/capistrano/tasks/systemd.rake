@@ -5,6 +5,7 @@ git_plugin = self
 namespace :cable do
   desc "Install Cable systemd service"
   task :install do
+    git_plugin.check_removed_options!
     on roles(fetch(:cable_role)) do |role|
       upload_compiled_template = lambda do |template_name, unit_filename|
         git_plugin.upload_template_cable template_name, "#{fetch(:tmp_dir)}/#{unit_filename}", role
@@ -16,6 +17,8 @@ namespace :cable do
           execute :mv, "#{fetch(:tmp_dir)}/#{unit_filename}", systemd_path.to_s
         end
       end
+
+      git_plugin.cable_socket_dirs.each { |dir| execute :mkdir, "-p", dir }
 
       upload_compiled_template.call("cable.service", "#{fetch(:cable_service_unit_name)}.service")
 
