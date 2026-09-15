@@ -12,7 +12,7 @@
 [Unit]
 Description=Cable HTTP Server for <%= "#{fetch(:application)} (#{fetch(:stage)})" %>
 <%= "Requires=#{fetch(:cable_socket_unit_name)}" if fetch(:cable_enable_socket_service) %>
-After=syslog.target network.target
+After=syslog.target network.target<%= " #{fetch(:cable_socket_unit_name)}" if fetch(:cable_enable_socket_service) %>
 
 [Service]
 Type=<%= service_unit_type %>

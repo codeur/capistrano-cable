@@ -3,17 +3,19 @@ Description=Cable Puma HTTP Server Accept Sockets for <%= "#{fetch(:application)
 
 [Socket]
 <% cable_binds.each do |bind| -%>
-<%= "ListenStream=#{bind.local.address}" %>
+ListenStream=<%= bind.address %>
 <% end -%>
 
 # Don't let systemd accept the request, wait for Cable to do that.
 # Systemd will start the cable service upon first request if it wasn't started.
 #
-# You might also want to set your Nginx upstream to have a fail_timeout large enough to accomodate your app's
-# startup time.
+# Systemd keeps the socket open across restarts of the service: connections are
+# queued in the backlog instead of being refused while Cable boots.
+#
+# You might also want to give the web server in front a connection timeout large
+# enough to accommodate your app's startup time.
 Accept=no
-<%= "NoDelay=true" if fetch(:cable_systemctl_user) == :system %>
-ReusePort=true
+<%= "NoDelay=true" unless cable_binds.all?(&:unix?) %>
 Backlog=1024
 
 SyslogIdentifier=<%= fetch(:cable_socket_unit_name) %>
