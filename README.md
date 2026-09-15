@@ -73,14 +73,9 @@ set :cable_bind, "ssl://0.0.0.0:28090?cert=/path/cert.pem&key=/path/key.pem"
 
 By default the server listens on a unix socket in the shared directory, which
 keeps it unreachable from the outside and saves picking a free port on every
-host. The socket directory is created by `cable:install`, and the web server
-reaches it as any other upstream:
-
-```nginx
-upstream cable {
-  server unix:/home/myapp/public_html/shared/tmp/sockets/cable.sock fail_timeout=0;
-}
-```
+host. The socket directory is created by `cable:install`; the web server in
+front then proxies to that socket path instead of a host and port, the way it
+proxies to any other unix socket.
 
 A unix socket path has to be absolute: write `unix:///path/to/cable.sock`, with
 three slashes.
@@ -107,9 +102,9 @@ Nothing else to do on the Capistrano side: the systemd units are now installed
 at every deploy, before the server is restarted, so upgrading the gem and
 deploying is enough to move an app to its socket.
 
-The one manual step is the web server, which has to point at the socket instead
-of the port (see the upstream example above). If both can't be changed in the
-same window, keep the port for now:
+The one manual step is the web server, which has to proxy to the socket instead
+of the port. If both can't be changed in the same window, keep the port for
+now:
 
 ```ruby
 set :cable_bind, "tcp://0.0.0.0:28090"
